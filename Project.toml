@@ -1,0 +1,4 @@
+name = "Umatrix"
+uuid = "70e01fe6-2b10-4917-bc2d-43ebefaa6adf"
+authors = ["Tobias Frilling <tobias@frilling-online.de>"]
+version = "0.1.0"
