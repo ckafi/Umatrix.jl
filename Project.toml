@@ -2,3 +2,6 @@ name = "Umatrix"
 uuid = "70e01fe6-2b10-4917-bc2d-43ebefaa6adf"
 authors = ["Tobias Frilling <tobias@frilling-online.de>"]
 version = "0.1.0"
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"

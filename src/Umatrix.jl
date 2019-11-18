@@ -14,4 +14,21 @@
 
 module Umatrix
 
+using Distributions
+
+function esomInit(data::Matrix{Float64}; init_method = :uniform_min_max, rows = 50, columns = 82)
+    randcol = if init_method == :uniform_min_max
+                  col -> rand(Uniform(minimum(col), maximum(col)), rows * columns)
+              elseif init_method == :uniform_mean_std
+                  col -> rand(Uniform(mean(col), std(col)), rows * columns)
+              elseif init_method == :normal_mean_std
+                  col -> rand(Normal(mean(col), std(col)), rows * columns)
+              elseif init_method == :zeros
+                  col -> zeros(rows * columns)
+              else
+                  throw(ArgumentError("$(init_method) is not a valid initialization method"))
+              end
+    return mapslices(randcol, data, dims = 1)
+end
+
 end # module
