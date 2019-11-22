@@ -19,12 +19,12 @@ Base.@kwdef mutable struct Settings
     epochs::Int                   = 24
     startLearningRate::Float64    = 0.5
     endLearningRate::Float64      = 0.1
-    startRadius::Int              = 24
-    endRadius::Int                = 1
+    learningRateCooling::Symbol   = :linear
+    startRadius::Float64          = 24
+    endRadius::Float64            = 1
+    radiusCooling::Symbol         = :linear
     init_method::Symbol           = :uniform_min_max
     neighbourhoodFunction::Symbol = :gauss
-    neighbourhoodCooling::Symbol  = :linear
-    learningRateCooling::Symbol   = :linear
 end
 
 const defaultSettings = Settings()

@@ -30,8 +30,23 @@ function bestMatch(dataPoint::Vector{<:Real}, weights::Matrix{<:Real})
     return map(row -> dist(row, dataPoint), eachrow(weights)) |> argmin
 end
 
-function bestMatches(data::Matrix{<Real}, weights::Matrix{<:Real})
+function bestMatches(data::Matrix{<:Real}, weights::Matrix{<:Real})
     @todo
+end
+
+function coolDown(method::Symbol, args...)
+    coolDown(Val(method), args...)
+end
+
+function coolDown(::Val{:linear}, start, stop, steps)
+    step -> start - ((start - stop) / steps) * (step - 1)
+end
+
+function coolDown(::Val{:leadInOut}, start, stop, steps; leadIn = 0.1, leadOut = 0.95)
+    step -> if (step/steps <= leadIn) start
+            elseif (step/steps >= leadOut) stop
+            else start - ((start - stop) / steps) * (step - 1)
+            end
 end
 
 function esomInit(data::Matrix{<:Real}, settings = defaultSettings)
@@ -50,8 +65,48 @@ function esomInit(data::Matrix{<:Real}, settings = defaultSettings)
     return mapslices(randcol, data, dims = 1)
 end
 
+function gridNeighbourhoodPattern(radius::T) where {T<:Real}
+    radius = floor(Int, radius)
+    dist(x,y) = (x,y).^2 |> sum
+    flipV(q) = map(t -> t.*(-1,1), q)
+    flipH(q) = map(t -> t.*(1,-1), q)
+    quad1 = [[x,y] for x in 0:radius for y in 0:radius if dist(x,y) <= radius^2]
+    quad2 = flipV(quad1)
+    quad3 = flipH(quad2)
+    quad4 = flipV(quad3)
+    result = hcat(quad1..., quad2..., quad3..., quad4...)
+    return unique(result, dims=2) |> transpose
+end
+
+function esomTrainStep(dataPoint::Vector{<:Real}, weights::Matrix{<:Real}, radius::T, learningRate::Float64, pattern, radiusBiggerThanTorus = true, settings = defaultSettings) where {T<:Real}
+    @todo
+end
+
 function esomTrainOnline(data::Matrix{<:Real}, weights::Matrix{<:Real}, settings = defaultSettings)
+    @todo
     @assert size(data, 2) == size(weights, 2)
+    s = settings
+    coolDownRadius = coolDown(s.radiusCooling, s.startRadius, s.endRadius)
+    coolDownLearningrate = coolDown(s.learningRateCooling, s.startLearningRate, s.endLearningRate)
+
+    for i in 1:s.epochs
+        data_view = view(data, randperm(size(data, 1)), :)
+        radius = coolDownRadius(i)
+        learningRate = coolDownLearningrate(i)
+        println("Epoch $(i) started.")
+        pattern = gridNeighbourhoodPattern(radius)
+        radiusBiggerThanTorus = ((radius * 2) >= s.columns) | ((radius * 2) >= s.lines)
+        for dataPoint in eachrow(data_view)
+            weights = esomTrainStep(dataPoint, weights, radius, learningRate, pattern,
+                                    radiusBiggerThanTorus, settings)
+        end
+    end
+
+    println("---- Esom Training Finished ----")
+    return weights
+end
+
+function umatrixForEsom(args...)
     @todo
 end
 
