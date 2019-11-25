@@ -24,30 +24,7 @@ using Random
 
 include("Settings.jl")
 
-function bestMatch(dataPoint::Vector{<:Real}, weights::Matrix{<:Real})
-    @assert size(dataPoint, 1) == size(weights, 2)
-    dist(v1,v2) = (v1 .- v2).^2 |> sum
-    return map(row -> dist(row, dataPoint), eachrow(weights)) |> argmin
-end
-
-function bestMatches(data::Matrix{<:Real}, weights::Matrix{<:Real})
-    @todo
-end
-
-function coolDown(method::Symbol, args...)
-    coolDown(Val(method), args...)
-end
-
-function coolDown(::Val{:linear}, start, stop, steps)
-    step -> start - ((start - stop) / steps) * (step - 1)
-end
-
-function coolDown(::Val{:leadInOut}, start, stop, steps; leadIn = 0.1, leadOut = 0.95)
-    step -> if (step/steps <= leadIn) start
-            elseif (step/steps >= leadOut) stop
-            else start - ((start - stop) / steps) * (step - 1)
-            end
-end
+const EsomWeights{T<:Real} = Array{T,3}
 
 function esomInit(data::Matrix{<:Real}, settings = defaultSettings)
     @unpack rows, columns, init_method
@@ -62,28 +39,75 @@ function esomInit(data::Matrix{<:Real}, settings = defaultSettings)
               else
                   throw(ArgumentError("$(init_method) is not a valid initialization method"))
               end
-    return mapslices(randcol, data, dims = 1)
+    result = mapslices(randcol, data, dims = 1)
+    return reshape(result', (size(data,2), rows, columns)) |> collect
 end
 
-function gridNeighbourhoodPattern(radius::T) where {T<:Real}
-    radius = floor(Int, radius)
+function bestMatch(dataPoint::Vector{<:Real}, weights::EsomWeights{<:Real})
+    @assert size(dataPoint, 1) == size(weights, 1)
+    dist = SqEuclidean()
+    index_3d = mapslices(weight -> dist(weight, dataPoint), weights, dims=1) |> argmin
+    return CartesianIndex(index_3d[2], index_3d[3])
+end
+
+function bestMatches(args...)
+    @todo
+end
+
+function coolDown(method::Symbol, start, stop, steps, args...; kwargs...)
+    @assert 0 < start < stop
+    @assert 0 < steps
+    return coolDown(Val(method), start, stop, steps, args...; kwargs...)
+end
+
+function coolDown(::Val{:linear}, start, stop, steps)
+    return step -> start - ((start - stop) / steps) * (step - 1)
+end
+
+function coolDown(::Val{:leadInOut}, start, stop, steps; leadIn = 0.1, leadOut = 0.95)
+    @assert leadIn < leadOut
+    @assert leadOut - leadIn >= 0
+    return step -> if (step/steps <= leadIn) start
+                   elseif (step/steps >= leadOut) stop
+                   else start - ((start - stop) / steps) * (step - 1)
+                   end
+end
+
+function neighbourhoodOffsets(radius::T) where {T<:Real}
+    @assert radius >= 0
     dist(x,y) = (x,y).^2 |> sum
-    flipV(q) = map(t -> t.*(-1,1), q)
-    flipH(q) = map(t -> t.*(1,-1), q)
-    quad1 = [[x,y] for x in 0:radius for y in 0:radius if dist(x,y) <= radius^2]
-    quad2 = flipV(quad1)
-    quad3 = flipH(quad2)
-    quad4 = flipV(quad3)
-    result = hcat(quad1..., quad2..., quad3..., quad4...)
-    return unique(result, dims=2) |> transpose
+    flipV(i) = CartesianIndex(-i[1], i[2])
+    flipH(i) = CartesianIndex(i[1], -i[2])
+    quad1 = [CartesianIndex(x,y) for x in 0:radius for y in 0:radius if dist(x,y) <= radius^2]
+    quad2 = flipV.(quad1)
+    quad3 = flipH.(quad2)
+    quad4 = flipV.(quad3)
+    return vcat(quad1,quad2,quad3,quad4) |> unique
 end
 
-function esomTrainStep(dataPoint::Vector{<:Real}, weights::Matrix{<:Real}, radius::T, learningRate::Float64, pattern, radiusBiggerThanTorus = true, settings = defaultSettings) where {T<:Real}
+function neighbourhoodFromOffsets(index::CartesianIndex{2}, offsets::Vector{CartesianIndex{2}},
+                                  settings = defaultSettings)
+    @unpack toroid, rows, columns
+    neighbourhood = map(i -> i + index, offsets)
+    if toroid
+        mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
+        neighbourhood = map(i -> CartesianIndex(mod_replace_zero.(i.I,(rows,columns))), neighbourhood)
+    else
+        neighbourhood = filter(i -> 1 <= i.I[1] <= rows && 1 <= i.I[2] <= columns, neighbourhood)
+    end
+    return unique(neighbourhood)
+end
+
+function esomTrainStep(dataPoint::Vector{<:Real}, weights::EsomWeights{<:Real},
+                       radius::Real, learningRate::Float64, settings = defaultSettings)
+    @unpack columns
+    offsets = neighbourhoodOffsets(radius)
+    bm = bestMatch(dataPoint, weights)
+    neighbourhood = neighbourhoodOffsets(bm, offsets, settings)
     @todo
 end
 
-function esomTrainOnline(data::Matrix{<:Real}, weights::Matrix{<:Real}, settings = defaultSettings)
-    @todo
+function esomTrainOnline(data::Matrix{<:Real}, weights::EsomWeights{<:Real}, settings = defaultSettings)
     @assert size(data, 2) == size(weights, 2)
     s = settings
     coolDownRadius = coolDown(s.radiusCooling, s.startRadius, s.endRadius)
@@ -94,11 +118,8 @@ function esomTrainOnline(data::Matrix{<:Real}, weights::Matrix{<:Real}, settings
         radius = coolDownRadius(i)
         learningRate = coolDownLearningrate(i)
         println("Epoch $(i) started.")
-        pattern = gridNeighbourhoodPattern(radius)
-        radiusBiggerThanTorus = ((radius * 2) >= s.columns) | ((radius * 2) >= s.lines)
         for dataPoint in eachrow(data_view)
-            weights = esomTrainStep(dataPoint, weights, radius, learningRate, pattern,
-                                    radiusBiggerThanTorus, settings)
+            weights = esomTrainStep(dataPoint, weights, radius, learningRate, settings)
         end
     end
 
@@ -119,8 +140,7 @@ function shiftedNeurons(args...)
 end
 
 function esomTrain(data::Matrix{<:Real}, key = 1:size(data,1), settings = defaultSettings;
-                   shiftToHighestDensity = false)
-    @todo
+                   shiftToHighestDensity = false) # shift normally true
     @assert size(data, 2) == size(key, 1)
     grid = esomInit(data, settings)
     weights = esomTrainOnline(data, grid, settings)
@@ -129,9 +149,9 @@ function esomTrain(data::Matrix{<:Real}, key = 1:size(data,1), settings = defaul
         radius = filter(!iszero, pairwise(Euclidean(), data, dims=1)) |> mean
         pmatrix = pmatrixForEsom(data, weights, radius, settings)
         pos = findall(isequal(maximum(pmatrix)), pmatrix)[1]
-        weights = shiftedNeurons(Weights, Lines, Columns, -pos[1], -pos[2])
+        weights = shiftedNeurons(weights, -pos[1], -pos[2], settings)
     end
-    projection = bestMatches(data, weights, settings.columns)
+    projection = bestMatches(data, weights, settings)
     umatrix = umatrixForEsom(weights, settings)
     return projection, weights, umatrix
 end
