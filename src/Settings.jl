@@ -14,20 +14,20 @@
 
 Base.@kwdef mutable struct Settings
     rows::Int                     = 50
-    columns::Int                  = 82
+    columns::Int                  = 80
     toroid::Bool                  = true
     epochs::Int                   = 24
-    startLearningRate::Float64    = 0.5
-    endLearningRate::Float64      = 0.1
+    learningRate                  = (0.5,0.1)
     learningRateCooling::Symbol   = :linear
-    startRadius::Float64          = 24
-    endRadius::Float64            = 1
+    radius                        = (24, 1)
     radiusCooling::Symbol         = :linear
     init_method::Symbol           = :uniform_min_max
-    neighbourhoodFunction::Symbol = :gauss
+    neighbourhoodFunction::Symbol = :cone
 end
 
 const defaultSettings = Settings()
+
+Base.copy(s::Settings) = deepcopy(s)
 
 macro unpack(exp)
     keys = isa(exp, Symbol) ? [exp] : exp.args

@@ -54,17 +54,13 @@ function bestMatches(args...)
     @todo
 end
 
-function coolDown(method::Symbol, start, stop, steps, args...; kwargs...)
-    @assert 0 < start < stop
-    @assert 0 < steps
-    return coolDown(Val(method), start, stop, steps, args...; kwargs...)
-end
+@inline coolDown(method::Symbol, args...) = coolDown(Val(method), args...)
 
-function coolDown(::Val{:linear}, start, stop, steps)
+function coolDown(::Val{:linear}, (start, stop), steps)
     return step -> start - ((start - stop) / steps) * (step - 1)
 end
 
-function coolDown(::Val{:leadInOut}, start, stop, steps; leadIn = 0.1, leadOut = 0.95)
+function coolDown(::Val{:leadInOut}, (start, stop), steps; leadIn = 0.1, leadOut = 0.95)
     @assert leadIn < leadOut
     @assert leadOut - leadIn >= 0
     return step -> if (step/steps <= leadIn) start
@@ -75,10 +71,10 @@ end
 
 function neighbourhoodOffsets(radius::T) where {T<:Real}
     @assert radius >= 0
-    dist(x,y) = (x,y).^2 |> sum
     flipV(i) = CartesianIndex(-i[1], i[2])
     flipH(i) = CartesianIndex(i[1], -i[2])
-    quad1 = [CartesianIndex(x,y) for x in 0:radius for y in 0:radius if dist(x,y) <= radius^2]
+    quad1 = [CartesianIndex(x,y) for x in 0:radius, y in 0:radius
+             if ((x,y).^2 |> sum) <= radius^2]
     quad2 = flipV.(quad1)
     quad3 = flipH.(quad2)
     quad4 = flipV.(quad3)
@@ -98,20 +94,42 @@ function neighbourhoodFromOffsets(index::CartesianIndex{2}, offsets::Vector{Cart
     return unique(neighbourhood)
 end
 
-function esomTrainStep(dataPoint::Vector{<:Real}, weights::EsomWeights{<:Real},
-                       radius::Real, learningRate::Float64, settings = defaultSettings)
-    @unpack columns
+@inline neighbourhoodKernel(kernel::Symbol) = neighbourhoodKernel(Val(kernel))
+
+function neighbourhoodKernel(::Val{:cone})
+    (dist, radius) -> (radius - dist)/radius
+end
+
+function neighbourhoodKernel(::Val{:gauss})
+    (dist, radius) -> exp(-(dist/radius)^2/2)
+end
+
+function neighbourhoodKernel(::Val{:mexhat})
+    (dist,radius) -> begin
+        square = (dist/radius)^2
+        (1 - square) * exp(-square/2)
+    end
+end
+
+function esomTrainWeights!(dataPoint::Vector{<:Real}, weights::EsomWeights{<:Real},
+                           radius::Real, learningRate::Float64, settings = defaultSettings)
     offsets = neighbourhoodOffsets(radius)
-    bm = bestMatch(dataPoint, weights)
-    neighbourhood = neighbourhoodOffsets(bm, offsets, settings)
-    @todo
+    dist(x,y) = (x,y).^2 |> sum |> sqrt
+    distances = map(i -> dist(i.I...), offsets)
+    bm_index = bestMatch(dataPoint, weights)
+    neighbourhood = neighbourhoodFromOffsets(bm_index, offsets, settings)
+    kernel = neighbourhoodKernel(:mexhat)
+    for i in 1:size(neighbourhood, 1)
+        index = neighbourhood[i]
+        weights[:,index] +=  learningRate * kernel(distances[i], radius) * (dataPoint - weights[:,index]);
+    end
 end
 
 function esomTrainOnline(data::Matrix{<:Real}, weights::EsomWeights{<:Real}, settings = defaultSettings)
     @assert size(data, 2) == size(weights, 2)
     s = settings
-    coolDownRadius = coolDown(s.radiusCooling, s.startRadius, s.endRadius)
-    coolDownLearningrate = coolDown(s.learningRateCooling, s.startLearningRate, s.endLearningRate)
+    coolDownRadius = coolDown(s.radiusCooling, s.radius, s.epochs)
+    coolDownLearningrate = coolDown(s.learningRateCooling, s.learningRate, e.epochs)
 
     for i in 1:s.epochs
         data_view = view(data, randperm(size(data, 1)), :)
@@ -119,7 +137,7 @@ function esomTrainOnline(data::Matrix{<:Real}, weights::EsomWeights{<:Real}, set
         learningRate = coolDownLearningrate(i)
         println("Epoch $(i) started.")
         for dataPoint in eachrow(data_view)
-            weights = esomTrainStep(dataPoint, weights, radius, learningRate, settings)
+            weights = esomTrainWeights!(dataPoint, weights, radius, learningRate, settings)
         end
     end
 
