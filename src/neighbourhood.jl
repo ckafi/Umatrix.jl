@@ -12,25 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function neighbourhoodOffsets(radius::T) where {T<:Real}
+function neighbourhoodOffsets(radius::Float64)
     @assert radius >= 0
     radius_i = ceil(Int, radius)
-    flipV(i) = (-i[1], i[2])
-    flipH(i) = (i[1], -i[2])
-    quad1 = [(x,y) for x in 0:radius_i, y in 0:radius_i
-             if ((x,y).^2 |> sum) <= radius^2]
-    quad2 = flipV.(quad1)
-    quad3 = flipH.(quad2)
-    quad4 = flipV.(quad3)
-    result = vcat(quad1,quad2,quad3,quad4) |> unique
-    return map(CartesianIndex, result)
+    result = Set{CartesianIndex{2}}()
+    sizehint!(result, 4*radius_i^2)
+    for x in 1:radius_i, y in 1:radius_i
+        if x^2 + y^2 <= radius^2
+            push!(result, CartesianIndex(x,y))
+        end
+    end
+    return collect(result)
 end
 
-function neighbourhoodFromOffsets(index::CartesianIndex{2}, offsets::AbstractVector{CartesianIndex{2}},
+function neighbourhoodFromOffsets(index::CartesianIndex{2},
+                                  offsets::AbstractVector{CartesianIndex{2}},
                                   settings = defaultSettings)
-    @unpack toroid, rows, columns
+    @unpack rows, columns
     neighbourhood = map(i -> i + index, offsets)
-    if toroid
+    if settings.toroid
         mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
         neighbourhood = map(i -> CartesianIndex(mod_replace_zero.(i.I,(rows,columns))), neighbourhood)
     else
@@ -42,15 +42,15 @@ end
 @inline neighbourhoodKernel(kernel::Symbol) = neighbourhoodKernel(Val(kernel))
 
 function neighbourhoodKernel(::Val{:cone})
-    (dist, radius) -> (radius - dist)/radius
+    (dist::Float64, radius::Float64) -> (radius - dist)/radius
 end
 
 function neighbourhoodKernel(::Val{:gauss})
-    (dist, radius) -> exp(-(dist/radius)^2/2)
+    (dist::Float64, radius::Float64) -> exp(-(dist/radius)^2/2)
 end
 
 function neighbourhoodKernel(::Val{:mexhat})
-    (dist,radius) -> begin
+    (dist::Float64,radius::Float64) -> begin
         square = (dist/radius)^2
         (1 - square) * exp(-square/2)
     end

@@ -23,13 +23,13 @@ using Distributions
 using JuliennedArrays
 using Random
 
-const EsomWeights{T<:Real} = AbstractArray{T,3}
+const EsomWeights{T<:Float64} = AbstractArray{T,3}
 
 include("Settings.jl")
 include("coolDowns.jl")
 include("neighbourhood.jl")
 
-function esomInit(data::AbstractMatrix{<:Real}, settings = defaultSettings)
+function esomInit(data::AbstractMatrix{<:Float64}, settings = defaultSettings)
     @unpack rows, columns, init_method
     randcol = if init_method == :uniform_min_max
                   col -> rand(Uniform(minimum(col), maximum(col)), rows * columns)
@@ -46,7 +46,7 @@ function esomInit(data::AbstractMatrix{<:Real}, settings = defaultSettings)
     return reshape(result', (size(data,2), rows, columns))
 end
 
-function bestMatch(dataPoint::AbstractVector{<:Real}, weights::EsomWeights{<:Real})
+function bestMatch(dataPoint::AbstractVector{<:Float64}, weights::EsomWeights{<:Float64})
     @assert size(dataPoint, 1) == size(weights, 1)
     dist = SqEuclidean()
     slice = Slices(weights, 1)
@@ -58,15 +58,15 @@ function bestMatches(args...)
     @todo
 end
 
-function esomTrainWeights!(dataPoint::AbstractVector{<:Real}, weights::EsomWeights{<:Real},
-                           radius::Real, learningRate::Float64, settings = defaultSettings)
+function esomTrainWeights!(dataPoint::AbstractVector{<:Float64}, weights::EsomWeights{<:Float64},
+                           radius::Float64, learningRate::Float64, settings = defaultSettings)
     @assert size(dataPoint, 1) == size(weights, 1)
     offsets = neighbourhoodOffsets(radius)
-    dist(x,y) = (x,y).^2 |> sum |> sqrt
-    distances = map(i -> dist(i.I...), offsets)
+    dist(i) = sqrt(sum(i.I.^2))
+    distances = map(dist, offsets)
     bm_index = bestMatch(dataPoint, weights)
     neighbourhood = neighbourhoodFromOffsets(bm_index, offsets, settings)
-    kernel = neighbourhoodKernel(:mexhat)
+    kernel = neighbourhoodKernel(settings.neighbourhoodFunction)
     for i in 1:size(neighbourhood, 1)
         index = neighbourhood[i]
         weights[:,index] +=  learningRate * kernel(distances[i], radius) *
@@ -74,7 +74,7 @@ function esomTrainWeights!(dataPoint::AbstractVector{<:Real}, weights::EsomWeigh
     end
 end
 
-function esomTrainOnline!(data::AbstractMatrix{<:Real}, weights::EsomWeights{<:Real},
+function esomTrainOnline!(data::AbstractMatrix{<:Float64}, weights::EsomWeights{<:Float64},
                          settings = defaultSettings)
     @assert size(data, 2) == size(weights, 1)
     s = settings
@@ -106,7 +106,7 @@ function shiftedNeurons(args...)
     @todo
 end
 
-function shiftToHighestDensity(data::AbstractMatrix{<:Real}, weights::EsomWeights{<:Real},
+function shiftToHighestDensity(data::AbstractMatrix{<:Float64}, weights::EsomWeights{<:Float64},
                                settings = defaultSettings)
     if !settings.toroid return weights end
     radius = filter(!iszero, pairwise(Euclidean(), data, dims=1)) |> mean
@@ -115,7 +115,7 @@ function shiftToHighestDensity(data::AbstractMatrix{<:Real}, weights::EsomWeight
     weights = shiftedNeurons(weights, -pos[1], -pos[2], settings)
 end
 
-function esomTrain(data::AbstractMatrix{<:Real}, key = 1:size(data,1), settings = defaultSettings)
+function esomTrain(data::AbstractMatrix{<:Float64}, key = 1:size(data,1), settings = defaultSettings)
     @assert size(data, 2) == size(key, 1)
     weights = esomInit(data, settings)
     weights = esomTrainOnline(data, weights, settings)
