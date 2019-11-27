@@ -22,18 +22,18 @@ Base.@kwdef mutable struct Settings
     radius                        = (24, 1)
     radiusCooling::Symbol         = :linear
     init_method::Symbol           = :uniform_min_max
-    neighbourhoodFunction::Symbol = :cone
+    neighbourhoodFunction::Symbol = :gauss
 end
 
 const defaultSettings = Settings()
-
-Base.copy(s::Settings) = deepcopy(s)
 
 macro unpack(exp)
     keys = isa(exp, Symbol) ? [exp] : exp.args
     assigments = [:( $key = getproperty(settings, $(Expr(:quote, key))) ) for key in keys]
     esc(Expr(:block, assigments...))
 end
+
+Base.copy(s::Settings) = deepcopy(s)
 
 function Base.show(io::IO, ::MIME"text/plain", settings::Settings)
     print(io, "Umatrix settings:")
