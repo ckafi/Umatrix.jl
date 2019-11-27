@@ -25,6 +25,7 @@ using Random
 
 const EsomWeights{T<:Float64} = AbstractArray{T,3}
 
+include("utils.jl")
 include("Settings.jl")
 include("coolDowns.jl")
 include("neighbourhood.jl")
@@ -50,7 +51,7 @@ function bestMatch(dataPoint::AbstractVector{<:Float64}, weights::EsomWeights{<:
     @assert size(dataPoint, 1) == size(weights, 1)
     dist = SqEuclidean()
     slice = Slices(weights, 1)
-    index = map(weight -> dist(weight, dataPoint), slice) |> argmin
+    index = _findmin(weight -> dist(weight, dataPoint), slice)[2]
     return CartesianIndex(index)
 end
 
