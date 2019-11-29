@@ -23,80 +23,25 @@ using Distributions
 using JuliennedArrays
 using Random
 
-const EsomWeights{T<:Float64} = AbstractArray{T,3}
+const EsomWeights{T} = AbstractArray{T,3}
 
 include("utils.jl")
-include("Settings.jl")
+include("settings.jl")
+include("initMethod.jl")
 include("coolDowns.jl")
 include("neighbourhood.jl")
+include("esom.jl")
 
-function esomInit(data::AbstractMatrix{<:Float64}, settings = defaultSettings)
-    @unpack rows, columns, init_method
-    randcol = if init_method == :uniform_min_max
-                  col -> rand(Uniform(minimum(col), maximum(col)), rows * columns)
-              elseif init_method == :uniform_mean_std
-                  col -> rand(Uniform(mean(col), std(col)), rows * columns)
-              elseif init_method == :normal_mean_std
-                  col -> rand(Normal(mean(col), std(col)), rows * columns)
-              elseif init_method == :zeros
-                  col -> zeros(rows * columns)
-              else
-                  throw(ArgumentError("$(init_method) is not a valid initialization method"))
-              end
-    result = mapslices(randcol, data, dims = 1)
-    return reshape(result', (size(data,2), rows, columns))
-end
-
-function bestMatch(dataPoint::AbstractVector{<:Float64}, weights::EsomWeights{<:Float64})
-    @assert size(dataPoint, 1) == size(weights, 1)
-    dist = SqEuclidean()
-    slice = Slices(weights, 1)
-    index = _findmin(weight -> dist(weight, dataPoint), slice)[2]
-    return CartesianIndex(index)
-end
-
-function bestMatches(args...)
-    @todo
-end
-
-function esomTrainWeights!(dataPoint::AbstractVector{<:Float64}, weights::EsomWeights{<:Float64},
-                           radius::Float64, learningRate::Float64, settings = defaultSettings)
-    @assert size(dataPoint, 1) == size(weights, 1)
-    offsets = neighbourhoodOffsets(radius)
-    dist(i) = sqrt(sum(i.I.^2))
-    distances = map(dist, offsets)
-    bm_index = bestMatch(dataPoint, weights)
-    neighbourhood = neighbourhoodFromOffsets(bm_index, offsets, settings)
-    kernel = neighbourhoodKernel(settings.neighbourhoodFunction)
-    for i in 1:size(neighbourhood, 1)
-        index = neighbourhood[i]
-        weights[:,index] +=  learningRate * kernel(distances[i], radius) *
-                             (dataPoint - weights[:,index]);
+function umatrixForEsom(weights::EsomWeights{Float64}, settings = defaultSettings)
+    (_, k, m) = size(weights)
+    result = Array{Float64, 2}(undef, k, m)
+    for index in CartesianIndices((k,m))
+        weight = weights[:,index]
+        neighbours = directNeighbours(index, settings)
+        dist(w) = settings.distance(w, weight)
+        result[index] = mean(map(dist, Slices(weights[:,neighbours], 1)))
     end
-end
-
-function esomTrainOnline!(data::AbstractMatrix{<:Float64}, weights::EsomWeights{<:Float64},
-                         settings = defaultSettings)
-    @assert size(data, 2) == size(weights, 1)
-    s = settings
-    coolDownRadius = coolDown(s.radiusCooling, s.radius, s.epochs)
-    coolDownLearningrate = coolDown(s.learningRateCooling, s.learningRate, s.epochs)
-
-    for i in 1:s.epochs
-        data_view = view(data, randperm(size(data, 1)), :)
-        radius = coolDownRadius(i)
-        learningRate = coolDownLearningrate(i)
-        println("Epoch $(i) started.")
-        for dataPoint in eachrow(data_view)
-            esomTrainWeights!(dataPoint, weights, radius, learningRate, settings)
-        end
-    end
-
-    println("---- Esom Training Finished ----")
-end
-
-function umatrixForEsom(args...)
-    @todo
+    result
 end
 
 function pmatrixForEsom(args...)
@@ -107,22 +52,13 @@ function shiftedNeurons(args...)
     @todo
 end
 
-function shiftToHighestDensity(data::AbstractMatrix{<:Float64}, weights::EsomWeights{<:Float64},
+function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                                settings = defaultSettings)
     if !settings.toroid return weights end
     radius = filter(!iszero, pairwise(Euclidean(), data, dims=1)) |> mean
     pmatrix = pmatrixForEsom(data, weights, radius, settings)
     pos = findfirst(isequal(maximum(pmatrix)), pmatrix)
     weights = shiftedNeurons(weights, -pos[1], -pos[2], settings)
-end
-
-function esomTrain(data::AbstractMatrix{<:Float64}, key = 1:size(data,1), settings = defaultSettings)
-    @assert size(data, 2) == size(key, 1)
-    weights = esomInit(data, settings)
-    weights = esomTrainOnline(data, weights, settings)
-    projection = bestMatches(data, weights, settings)
-    umatrix = umatrixForEsom(weights, settings)
-    return projection, weights, umatrix
 end
 
 end # module

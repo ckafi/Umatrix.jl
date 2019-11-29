@@ -13,16 +13,17 @@
 # limitations under the License.
 
 Base.@kwdef mutable struct Settings
-    rows::Int                     = 50
-    columns::Int                  = 80
-    toroid::Bool                  = true
-    epochs::Int                   = 24
-    learningRate                  = (0.5,0.1)
-    learningRateCooling::Symbol   = :linear
-    radius                        = (24, 1)
-    radiusCooling::Symbol         = :linear
-    init_method::Symbol           = :uniform_min_max
-    neighbourhoodFunction::Symbol = :gauss
+    rows::Int                            = 50
+    columns::Int                         = 80
+    toroid::Bool                         = true
+    epochs::Int                          = 24
+    learningRate::Tuple{Float64,Float64} = (0.5,0.1)
+    learningRateCooling::Symbol          = :linear
+    radius::Tuple{Int,Int}               = (24, 1)
+    radiusCooling::Symbol                = :linear
+    initMethod::Symbol                   = :uniform_min_max
+    neighbourhoodKernel::Symbol          = :gauss
+    distance::PreMetric                  = Euclidean()
 end
 
 const defaultSettings = Settings()

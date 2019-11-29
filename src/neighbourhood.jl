@@ -12,31 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function neighbourhoodOffsets(radius::Float64)
-    @assert radius >= 0
-    radius_i = ceil(Int, radius)
-    result = Set{CartesianIndex{2}}()
-    sizehint!(result, 4*radius_i^2)
-    for x in 1:radius_i, y in 1:radius_i
-        if x^2 + y^2 <= radius^2
-            push!(result, CartesianIndex(x,y))
-        end
-    end
-    return collect(result)
+function neighbourhoodOffsets(radius::T) where {T<:Real}
+    r_int = ceil(Int, radius)
+    result = CartesianIndices((r_int,r_int) .* 2 .+ 1) .-
+             CartesianIndex(r_int+1, r_int+1)
+    filter(i -> sum(i.I.^2) <= radius^2, result)
 end
 
 function neighbourhoodFromOffsets(index::CartesianIndex{2},
                                   offsets::AbstractVector{CartesianIndex{2}},
                                   settings = defaultSettings)
-    @unpack rows, columns
     neighbourhood = map(i -> i + index, offsets)
+    return unique(correctCoords(neighbourhood, settings))
+end
+
+function directNeighbours(ind::CartesianIndex{2}, settings = defaultSettings)
+    neighbours = (CartesianIndices((3,3)) .- (CartesianIndex(2,2) - ind))[:]
+    deleteat!(neighbours, 5)
+    return correctCoords(neighbours, settings)
+end
+
+function correctCoords(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
     if settings.toroid
-        mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
-        neighbourhood = map(i -> CartesianIndex(mod_replace_zero.(i.I,(rows,columns))), neighbourhood)
+        return wrapCoordsOnToroid(coords, settings)
     else
-        neighbourhood = filter(i -> 1 <= i.I[1] <= rows && 1 <= i.I[2] <= columns, neighbourhood)
+        return removeCoordsOutsideBounds(coords, settings)
     end
-    return unique(neighbourhood)
+end
+
+function removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
+    filter(i -> (1 <= i.I[1] <= settings.rows) && (1 <= i.I[2] <= settings.columns), coords)
+end
+
+function wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
+    mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
+    map(i -> CartesianIndex(mod_replace_zero.(i.I,(settings.rows,settings.columns))), coords)
 end
 
 @inline neighbourhoodKernel(kernel::Symbol) = neighbourhoodKernel(Val(kernel))
