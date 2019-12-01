@@ -15,17 +15,17 @@
 @inline initMethod(settings = defaultSettings) = initMethod(Val(settings.initMethod), settings)
 
 function initMethod(::Val{:uniform_min_max}, settings = defaultSettings)
-    col -> rand(Uniform(minimum(col), maximum(col)), settings.rows * settings.columns)
+    col -> rand(Uniform(minimum(col), maximum(col)), prod(settings.latticeSize))
 end
 
 function initMethod(::Val{:uniform_mean_std}, settings = defaultSettings)
-    col -> rand(Uniform(mean(col), std(col)), setting.rows * settings.columns)
+    col -> rand(Uniform(mean(col), std(col)), prod(settings.latticeSize))
 end
 
 function initMethod(::Val{:normal_mean_std}, settings = defaultSettings)
-    col -> rand(Uniform(mean(col), std(col)), settings.rows * settings.columns)
+    col -> rand(Uniform(mean(col), std(col)), prod(settings.latticeSize))
 end
 
 function initMethod(::Val{:zeros}, settings = defaultSettings)
-    col -> zeros(settings.rows * settings.columns)
+    col -> zeros(prod(settings.latticeSize))
 end

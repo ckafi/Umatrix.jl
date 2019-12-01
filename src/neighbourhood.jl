@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function neighbourhoodOffsets(radius::T) where {T<:Real}
-    r_int = ceil(Int, radius)
-    result = CartesianIndices((r_int,r_int) .* 2 .+ 1) .-
-             CartesianIndex(r_int+1, r_int+1)
-    filter(i -> sum(i.I.^2) <= radius^2, result)
+function neighbourhood(index::CartesianIndex{2}, radius::Float64,
+                    settings = defaultSettings)
+    offsets = neighbourhoodOffsets(radius)
+    f(i) = i + index
+    neighbours = f.(offsets)
+    return unique(correctCoords(neighbours, settings))
 end
 
-function neighbourhoodFromOffsets(index::CartesianIndex{2},
-                                  offsets::AbstractVector{CartesianIndex{2}},
-                                  settings = defaultSettings)
-    neighbourhood = map(i -> i + index, offsets)
-    return unique(correctCoords(neighbourhood, settings))
+function neighbourhoodOffsets(radius::Float64)
+    r_int = ceil(Int, radius)
+    offsets = (CartesianIndices((r_int,r_int) .* 2 .+ 1) .-
+               CartesianIndex(r_int+1, r_int+1))[:]
+    filter!(i -> sum(i.I.^2) <= radius^2, offsets)
+    return offsets
 end
 
 function directNeighbours(ind::CartesianIndex{2}, settings = defaultSettings)
@@ -41,12 +43,20 @@ function correctCoords(coords::AbstractVector{CartesianIndex{2}}, settings = def
 end
 
 function removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
-    filter(i -> (1 <= i.I[1] <= settings.rows) && (1 <= i.I[2] <= settings.columns), coords)
+    filter(i -> all((1,1) .<= i.I .<= settings.latticeSize), coords)
 end
 
 function wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
     mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
-    map(i -> CartesianIndex(mod_replace_zero.(i.I,(settings.rows,settings.columns))), coords)
+    map(i -> CartesianIndex(mod_replace_zero.(i.I,settings.latticeSize)), coords)
+end
+
+function latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2}, settings = defaultSettings)
+    diff = abs.((a - b).I)
+    if settings.toroid
+        diff = min.(diff, settings.latticeSize .- diff)
+    end
+    return sqrt(sum(diff))
 end
 
 @inline neighbourhoodKernel(kernel::Symbol) = neighbourhoodKernel(Val(kernel))

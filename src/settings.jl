@@ -13,6 +13,7 @@
 # limitations under the License.
 
 Base.@kwdef mutable struct Settings
+    latticeSize::Tuple{Int, Int}         = (50,80)
     rows::Int                            = 50
     columns::Int                         = 80
     toroid::Bool                         = true

@@ -21,44 +21,18 @@ end
 using Distances
 using Distributions
 using JuliennedArrays
+using Plots
 using Random
 
 const EsomWeights{T} = AbstractArray{T,3}
 
-include("utils.jl")
-include("settings.jl")
-include("initMethod.jl")
 include("coolDowns.jl")
-include("neighbourhood.jl")
 include("esom.jl")
-
-function umatrixForEsom(weights::EsomWeights{Float64}, settings = defaultSettings)
-    (_, k, m) = size(weights)
-    result = Array{Float64, 2}(undef, k, m)
-    for index in CartesianIndices((k,m))
-        weight = weights[:,index]
-        neighbours = directNeighbours(index, settings)
-        dist(w) = settings.distance(w, weight)
-        result[index] = mean(map(dist, Slices(weights[:,neighbours], 1)))
-    end
-    result
-end
-
-function pmatrixForEsom(args...)
-    @todo
-end
-
-function shiftedNeurons(args...)
-    @todo
-end
-
-function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
-                               settings = defaultSettings)
-    if !settings.toroid return weights end
-    radius = filter(!iszero, pairwise(Euclidean(), data, dims=1)) |> mean
-    pmatrix = pmatrixForEsom(data, weights, radius, settings)
-    pos = findfirst(isequal(maximum(pmatrix)), pmatrix)
-    weights = shiftedNeurons(weights, -pos[1], -pos[2], settings)
-end
+include("initMethod.jl")
+include("matrices.jl")
+include("neighbourhood.jl")
+include("plotting.jl")
+include("settings.jl")
+include("utils.jl")
 
 end # module

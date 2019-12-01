@@ -23,8 +23,9 @@ function esomTrainOnline(data::AbstractMatrix{Float64}, settings = defaultSettin
 end
 
 function esomInit(data::AbstractMatrix{Float64}, settings = defaultSettings)
-    result = mapslices(initMethod(settings), data, dims = 1)
-    return reshape(result', (size(data,2), settings.rows, settings.columns))
+    f = initMethod(settings)
+    result = hcat(f.(Slices(data, 1))...)
+    return reshape(permutedims(result), (size(data,2), settings.latticeSize...))
 end
 
 function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
@@ -55,17 +56,23 @@ end
 function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
                         radius::Float64, learningRate::Float64, settings = defaultSettings)
     @assert size(dataPoint, 1) == size(weights, 1)
-    offsets = neighbourhoodOffsets(radius)
     bestMatch_index = bestMatch(dataPoint, weights, settings)
-    neighbourhood = neighbourhoodFromOffsets(bestMatch_index, offsets, settings)
+    neighbours = neighbourhood(bestMatch_index, radius, settings)
     kernel = neighbourhoodKernel(settings.neighbourhoodKernel)
-    dist(i) = sqrt(sum(i.I.^2))
-    for i in 1:size(neighbourhood, 1)
-        index = neighbourhood[i]
-        distance = dist(offsets[i])
+    dist(i) = latticeDistance(i, bestMatch_index, settings)
+    for i in 1:size(neighbours, 1)
+        index = neighbours[i]
+        distance = dist(neighbours[i])
         weights[:,index] +=  learningRate * kernel(distance, radius) *
                              (dataPoint - weights[:,index]);
     end
+    return weights
+end
+
+function projection(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
+                    settings = defaultSettings)
+    f(i) = i => bestMatch(data[i,:], weights)
+    f.(1:size(data,1)) |> Dict
 end
 
 function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
