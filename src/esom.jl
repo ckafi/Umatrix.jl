@@ -13,23 +13,17 @@
 # limitations under the License.
 
 
-function esomTrain(data::AbstractMatrix{Float64}, settings = defaultSettings)
+function esomTrain(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     return esomTrainOnline(data, settings)
 end
 
-function esomTrainOnline(data::AbstractMatrix{Float64}, settings = defaultSettings)
+function esomTrainOnline(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     weights = esomInit(data, settings)
     return esomTrainOnline!(data, weights, settings)
 end
 
-function esomInit(data::AbstractMatrix{Float64}, settings = defaultSettings)
-    f = initMethod(settings)
-    result = hcat(f.(Slices(data, 1))...)
-    return reshape(permutedims(result), (size(data,2), settings.latticeSize...))
-end
-
 function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
-                         settings = defaultSettings)
+                         settings::Settings = defaultSettings)
     @assert size(data, 2) == size(weights, 1)
     s = settings
     coolDownRadius = coolDown(s.radiusCooling, s.radius, s.epochs)
@@ -44,8 +38,19 @@ function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Fl
     return weights
 end
 
+function esomInit(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
+    f = initMethod(settings)
+    result = hcat(f.(Slices(data, 1))...)
+    return reshape(permutedims(result), (size(data,2), settings.latticeSize...))
+end
+
+for f in (:esomTrain, :esomTrainOnline, :esomTrainOnline!, :esomInit)
+    @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
+end
+
 function esomTrainEpoch!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
-                         radius::Float64, learningRate::Float64, settings = defaultSettings)
+                         radius::Float64, learningRate::Float64,
+                         settings::Settings = defaultSettings)
     data_view = view(data, randperm(size(data, 1)), :)
     for dataPoint in eachrow(data_view)
         esomTrainStep!(dataPoint, weights, radius, learningRate, settings)
@@ -54,7 +59,8 @@ function esomTrainEpoch!(data::AbstractMatrix{Float64}, weights::EsomWeights{Flo
 end
 
 function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
-                        radius::Float64, learningRate::Float64, settings = defaultSettings)
+                        radius::Float64, learningRate::Float64,
+                        settings::Settings = defaultSettings)
     @assert size(dataPoint, 1) == size(weights, 1)
     bestMatch_index = bestMatch(dataPoint, weights, settings)
     neighbours = neighbourhood(bestMatch_index, radius, settings)
@@ -70,13 +76,21 @@ function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights
 end
 
 function projection(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
-                    settings = defaultSettings)
+                    settings::Settings = defaultSettings;
+                    key::AbstractVector{Int} = 1:size(data,1))
+    @assert length(key) == size(data, 1)
+    @assert allunique(key)
+    @assert all(i -> 1 <= i <= size(data, 1), key)
     f(i) = i => bestMatch(data[i,:], weights)
-    f.(1:size(data,1)) |> Dict
+    f.(key) |> Dict
+end
+
+function projection(data::LRNData, args...; kwargs...)
+    projection(data.data, args...; key=data.key, kwargs...)
 end
 
 function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
-                   settings = defaultSettings)
+                   settings::Settings = defaultSettings)
     @assert size(dataPoint, 1) == size(weights, 1)
     dist = settings.distance
     slice = Slices(weights, 1)
