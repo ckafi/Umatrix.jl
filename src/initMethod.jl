@@ -12,20 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-@inline initMethod(settings = defaultSettings) = initMethod(Val(settings.initMethod), settings)
+@inline initMethod(settings::Settings = defaultSettings) =
+    initMethod(Val(settings.initMethod), settings)
 
-function initMethod(::Val{:uniform_min_max}, settings = defaultSettings)
+function initMethod(::Val{:uniform_min_max}, settings::Settings = defaultSettings)
     col -> rand(Uniform(minimum(col), maximum(col)), prod(settings.latticeSize))
 end
 
-function initMethod(::Val{:uniform_mean_std}, settings = defaultSettings)
+function initMethod(::Val{:uniform_mean_std}, settings::Settings = defaultSettings)
     col -> rand(Uniform(mean(col), std(col)), prod(settings.latticeSize))
 end
 
-function initMethod(::Val{:normal_mean_std}, settings = defaultSettings)
+function initMethod(::Val{:normal_mean_std}, settings::Settings = defaultSettings)
     col -> rand(Uniform(mean(col), std(col)), prod(settings.latticeSize))
 end
 
-function initMethod(::Val{:zeros}, settings = defaultSettings)
+function initMethod(::Val{:zeros}, settings::Settings = defaultSettings)
     col -> zeros(prod(settings.latticeSize))
 end

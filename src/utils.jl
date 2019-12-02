@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This is basically Base.findmin, but first applies f to the elements
+# faster than findmin(map(f, a))
 function _findmin(f, a)
     p = pairs(a)
     (mi, mv), _ = iterate(p)

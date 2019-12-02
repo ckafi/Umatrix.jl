@@ -13,7 +13,7 @@
 # limitations under the License.
 
 function neighbourhood(index::CartesianIndex{2}, radius::Float64,
-                    settings = defaultSettings)
+                    settings::Settings = defaultSettings)
     offsets = neighbourhoodOffsets(radius)
     f(i) = i + index
     neighbours = f.(offsets)
@@ -28,13 +28,14 @@ function neighbourhoodOffsets(radius::Float64)
     return offsets
 end
 
-function directNeighbours(ind::CartesianIndex{2}, settings = defaultSettings)
+function directNeighbours(ind::CartesianIndex{2}, settings::Settings = defaultSettings)
     neighbours = (CartesianIndices((3,3)) .- (CartesianIndex(2,2) - ind))[:]
     deleteat!(neighbours, 5)
     return correctCoords(neighbours, settings)
 end
 
-function correctCoords(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
+function correctCoords(coords::AbstractVector{CartesianIndex{2}},
+                       settings::Settings = defaultSettings)
     if settings.toroid
         return wrapCoordsOnToroid(coords, settings)
     else
@@ -42,16 +43,19 @@ function correctCoords(coords::AbstractVector{CartesianIndex{2}}, settings = def
     end
 end
 
-function removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
+function removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}},
+                                   settings::Settings = defaultSettings)
     filter(i -> all((1,1) .<= i.I .<= settings.latticeSize), coords)
 end
 
-function wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}}, settings = defaultSettings)
+function wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}},
+                            settings::Settings = defaultSettings)
     mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
     map(i -> CartesianIndex(mod_replace_zero.(i.I,settings.latticeSize)), coords)
 end
 
-function latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2}, settings = defaultSettings)
+function latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2},
+                         settings::Settings = defaultSettings)
     diff = abs.((a - b).I)
     if settings.toroid
         diff = min.(diff, settings.latticeSize .- diff)
