@@ -12,31 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-@userplot UmatrixPlot
+@userplot Plot_Matrix
 
-@recipe function f(p::UmatrixPlot;
+@recipe function f(p::Plot_Matrix;
                    projection::Dict{Int, CartesianIndex{3}} = Dict(),
+                   normalize::Bool = true,
                    colorStyle::Symbol = :umatrix)
 
-    u = p.args[1]
-    (rows, columns) = size(u)
+    m = p.args[1]
+    if normalize
+        (min_m, max_m) = quantile(m[:], [.01, .99])
+        m = (m .- min_m) ./ (max_m - min_m)
+    end
+    (rows, columns) = size(m)
+
+    grid := false
+    framestyle := :none
     yflip --> true
+    colorbar --> true
+    aspect_ratio --> 1
 
     @series begin
         seriestype := :contourf
-        levels --> 10
+        (min_m, max_m) = quantile(m[:], [.01, .99])
+        levels --> round(Int, max_m / max(min_m, .05))
         seriescolor --> if colorStyle == :pmatrix colormap_pmatrix
                         else colormap_umatrix end
         linewidth --> 0.1
-        [u u; u u]
+        [m m; m m]
     end
 
     if !isempty(projection)
         @series begin
             seriestype := :scatter
+            widen := false
+            legend := false
             colorbar_entry := false
-            legend := :none
-            markercolor --> :red
+            markercolor --> :lightgreen
             markersize --> 2.5
             markerstrokewidth --> 0.4
             v = values(projection) |> collect
