@@ -18,6 +18,8 @@ macro todo()
     :(error("not implemented"))
 end
 
+using DataIo
+using CalculatedABC
 using Distances
 using Distributions
 using JuliennedArrays
@@ -26,13 +28,14 @@ using Random
 
 const EsomWeights{T} = AbstractArray{T,3}
 
+include("settings.jl")
+
 include("coolDowns.jl")
 include("esom.jl")
 include("initMethod.jl")
 include("matrices.jl")
 include("neighbourhood.jl")
 include("plotting.jl")
-include("settings.jl")
 include("utils.jl")
 
 end # module
