@@ -15,10 +15,12 @@
 @userplot Plot_Matrix
 
 @recipe function f(p::Plot_Matrix;
-                   settings::Settings = defaultSettings,
-                   projection::Dict{Int, CartesianIndex{3}} = Dict(),
-                   normalize::Bool = true,
-                   colorStyle::Symbol = :umatrix)
+                   settings = defaultSettings,
+                   projection = Dict(),
+                   key = 1:length(projection),
+                   classes = Dict(),
+                   normalize = true,
+                   colorStyle = :umatrix)
 
     m = p.args[1]
     if normalize
@@ -48,20 +50,28 @@
     end
 
     if !isempty(projection)
-        @series begin
-            seriestype := :scatter
-            widen := false
-            legend := false
-            colorbar_entry := false
-            markercolor --> :lightgreen
-            markersize --> 2.5
-            markerstrokewidth --> 0.4
-            v = values(projection) |> collect
-            if settings.toroid
-                v = vcat(v, map(i -> i + CartesianIndex(rows, 0), v))
-                v = vcat(v, map(i -> i + CartesianIndex(0, columns), v))
+        seriestype := :scatter
+        widen := false
+        legend := false
+        colorbar_entry := false
+        markersize --> 2.5
+        markerstrokewidth --> 0.4
+
+        if isempty(classes)
+            classes[1] = keys(projection) |> collect
+        end
+        colors = distinguishable_colors(length(classes), RGB(1,0,1))
+
+        for (class, indices) in classes
+            @series begin
+                markercolor := colors[class]
+                v = [projection[key[index]] for index in indices]
+                if settings.toroid
+                    v = vcat(v, map(i -> i + CartesianIndex(rows, 0), v))
+                    v = vcat(v, map(i -> i + CartesianIndex(0, columns), v))
+                end
+                getindex.(v,2), getindex.(v,1)
             end
-            getindex.(v,2), getindex.(v,1)
         end
     end
 
