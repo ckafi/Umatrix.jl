@@ -15,6 +15,7 @@
 @userplot Plot_Matrix
 
 @recipe function f(p::Plot_Matrix;
+                   settings::Settings = defaultSettings,
                    projection::Dict{Int, CartesianIndex{3}} = Dict(),
                    normalize::Bool = true,
                    colorStyle::Symbol = :umatrix)
@@ -39,7 +40,11 @@
         seriescolor --> if colorStyle == :pmatrix colormap_pmatrix
                         else colormap_umatrix end
         linewidth --> 0.1
-        [m m; m m]
+        if settings.toroid
+            [m m; m m]
+        else
+            m
+        end
     end
 
     if !isempty(projection)
@@ -52,8 +57,10 @@
             markersize --> 2.5
             markerstrokewidth --> 0.4
             v = values(projection) |> collect
-            v = vcat(v, map(i -> i + CartesianIndex(rows, 0), v))
-            v = vcat(v, map(i -> i + CartesianIndex(0, columns), v))
+            if settings.toroid
+                v = vcat(v, map(i -> i + CartesianIndex(rows, 0), v))
+                v = vcat(v, map(i -> i + CartesianIndex(0, columns), v))
+            end
             getindex.(v,2), getindex.(v,1)
         end
     end

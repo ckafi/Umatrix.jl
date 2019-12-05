@@ -18,7 +18,7 @@ macro todo()
     :(error("not implemented"))
 end
 
-using DataIo
+using DataIO
 using CalculatedABC
 using Distances
 using Distributions

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 function neighbourhood(index::CartesianIndex{2}, radius::Float64,
-                    settings::Settings = defaultSettings)
+                       settings::Settings = defaultSettings)
     offsets = neighbourhoodOffsets(radius)
     f(i) = i + index
     neighbours = f.(offsets)

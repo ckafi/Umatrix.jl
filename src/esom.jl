@@ -40,7 +40,7 @@ end
 
 function esomInit(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     f = initMethod(settings)
-    result = hcat(f.(Slices(data, 1))...)
+    result::Matrix{Float64} = hcat(f.(Slices(data, 1))...)
     return reshape(permutedims(result), (size(data,2), settings.latticeSize...))
 end
 
@@ -70,7 +70,7 @@ function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights
         index = neighbours[i]
         distance = dist(neighbours[i])
         weights[:,index] +=  learningRate * kernel(distance, radius) *
-                             (dataPoint - weights[:,index]);
+                             (dataPoint - weights[:,index])
     end
     return weights
 end

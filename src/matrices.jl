@@ -42,7 +42,6 @@ function pmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
         abc = ABCanalysis(distances)
         v = maximum(distances[abc.c_indices]) / minimum(distances[abc.a_indices])
         radius = v * p20
-        println(radius)
     end
 
     (_, k, m) = size(weights)
@@ -56,6 +55,22 @@ function pmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
         end
     end
     return result
+end
+
+function ustarmatrix(um::AbstractMatrix{Float64}, pm::AbstractMatrix{Int},
+                     settings::Settings = defaultSettings)
+    @assert size(um) == size(pm)
+    # Using the calculation form 'U*-matrix: a tool to visualize clusters in
+    # high dimensional data' (Ultsch 2003)
+    scaleFactor(p::Int) = (p - mean(pm)) / (mean(pm) - maximum(pm)) + 1
+    return um .* scaleFactor.(pm)
+end
+
+function ustarmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
+                     settings::Settings = defaultSettings)
+    um = umatrix(weights, settings)
+    pm = pmatrix(data, weights, settings)
+    return ustarmatrix(um, pm, settings)
 end
 
 function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
