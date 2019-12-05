@@ -44,10 +44,6 @@ function esomInit(data::AbstractMatrix{Float64}, settings::Settings = defaultSet
     return reshape(permutedims(result), (size(data,2), settings.latticeSize...))
 end
 
-for f in (:esomTrain, :esomTrainOnline, :esomTrainOnline!, :esomInit)
-    @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
-end
-
 function esomTrainEpoch!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                          radius::Float64, learningRate::Float64,
                          settings::Settings = defaultSettings)
@@ -96,4 +92,8 @@ function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Floa
     slice = Slices(weights, 1)
     index = _findmin(weight -> dist(weight, dataPoint), slice)[2]
     return CartesianIndex(index)
+end
+
+for f in (:esomTrain, :esomTrainOnline, :esomTrainOnline!, :esomInit)
+    @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
 end

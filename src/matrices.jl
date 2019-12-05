@@ -96,3 +96,7 @@ function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeigh
     pos = findfirst(isequal(maximum(p)), p)
     return shiftWeights(weights, pos, settings)
 end
+
+for f in (:pmatrix, :ustarmatrix, :shiftToHighestDensity)
+    @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
+end

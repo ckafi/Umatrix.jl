@@ -28,6 +28,8 @@ using Random
 
 const EsomWeights{T} = AbstractArray{T,3}
 
+export esomTrain, esomTrainOnline, projection, bestMatch
+export umatrix, pmatrix, ustarmatrix, shiftToHighestDensity
 include("settings.jl")
 
 include("coolDowns.jl")
