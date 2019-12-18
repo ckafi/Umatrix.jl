@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+    neighbourhoodOffsets(radius::Float64)
+
+Return every (unique) `CartesianIndex{2}` in a `radius`-sized circle around `index`.
+"""
 function neighbourhood(index::CartesianIndex{2}, radius::Float64,
                        settings::Settings = defaultSettings)
     offsets = neighbourhoodOffsets(radius)
@@ -20,6 +25,11 @@ function neighbourhood(index::CartesianIndex{2}, radius::Float64,
     return unique(correctCoords(neighbours, settings))
 end
 
+"""
+    neighbourhoodOffsets(radius::Float64)
+
+Return every `CartesianIndex{2}` in a `radius`-sized circle around (0,0).
+"""
 function neighbourhoodOffsets(radius::Float64)
     r_int = ceil(Int, radius)
     offsets = (CartesianIndices((r_int,r_int) .* 2 .+ 1) .-
@@ -28,12 +38,24 @@ function neighbourhoodOffsets(radius::Float64)
     return offsets
 end
 
+"""
+    directNeighbours(ind::CartesianIndex{2})
+
+Return the eight direct neighbours of index `ind`.
+"""
 function directNeighbours(ind::CartesianIndex{2}, settings::Settings = defaultSettings)
     neighbours = (CartesianIndices((3,3)) .- (CartesianIndex(2,2) - ind))[:]
+    # remove the index itself
     deleteat!(neighbours, 5)
     return correctCoords(neighbours, settings)
 end
 
+"""
+    correctCoords(coords::AbstractVector{CartesianIndex{2}})
+
+Remove (if the lattice is a plane) or wrap (if the lattice is a toroid)
+coordinates outside of the lattice size.
+"""
 function correctCoords(coords::AbstractVector{CartesianIndex{2}},
                        settings::Settings = defaultSettings)
     if settings.toroid
@@ -43,17 +65,33 @@ function correctCoords(coords::AbstractVector{CartesianIndex{2}},
     end
 end
 
+"""
+    removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}})
+
+Remove coordinates outside of the lattice size.
+"""
 function removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}},
                                    settings::Settings = defaultSettings)
     filter(i -> all((1,1) .<= i.I .<= settings.latticeSize), coords)
 end
 
+"""
+    wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}},
+
+Wrap coordinates outside of the lattice size around the torus.
+"""
 function wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}},
                             settings::Settings = defaultSettings)
+    # like mod, but returns y instead of 0
     mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
     map(i -> CartesianIndex(mod_replace_zero.(i.I,settings.latticeSize)), coords)
 end
 
+"""
+    latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2},
+
+Euclidean distance on the lattice.
+"""
 function latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2},
                          settings::Settings = defaultSettings)
     diff = abs.((a - b).I)
@@ -63,18 +101,34 @@ function latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2},
     return sqrt(sum(diff))
 end
 
-@inline neighbourhoodKernel(kernel::Symbol) = neighbourhoodKernel(Val(kernel))
+@inline neighbourhoodKernel(kernel::Symbol, radius::Float64) =
+    neighbourhoodKernel(Val(kernel), radius)
 
-function neighbourhoodKernel(::Val{:cone})
-    (dist::Float64, radius::Float64) -> (radius - dist)/radius
+"""
+    neighbourhoodKernel(::Val{:cone}, radius::Float64)
+
+Returns a linear neighbourhood decay function.
+"""
+function neighbourhoodKernel(::Val{:cone}, radius::Float64)
+    (dist::Float64) -> (radius - dist)/radius
 end
 
-function neighbourhoodKernel(::Val{:gauss})
-    (dist::Float64, radius::Float64) -> exp(-(dist/radius)^2/2)
+"""
+    neighbourhoodKernel(::Val{:gauss}, radius::Float64)
+
+Returns a gaussian neighbourhood decay function.
+"""
+function neighbourhoodKernel(::Val{:gauss}, radius::Float64)
+    (dist::Float64) -> exp(-(dist/radius)^2/2)
 end
 
-function neighbourhoodKernel(::Val{:mexhat})
-    (dist::Float64,radius::Float64) -> begin
+"""
+    neighbourhoodKernel(::Val{:mexhat}, radius::Float64)
+
+Returns a "Mexican hat" (Ricker wavelet) neighbourhood decay function.
+"""
+function neighbourhoodKernel(::Val{:mexhat}, radius::Float64)
+    (dist::Float64) -> begin
         square = (dist/radius)^2
         (1 - square) * exp(-square/2)
     end
