@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+    umatrix(weights::EsomWeights{Float64})
+
+Generate a U-matrix for the given ESOM weights.
+"""
 function umatrix(weights::EsomWeights{Float64}, settings::Settings = defaultSettings)
     (_, k, m) = size(weights)
     result = Array{Float64, 2}(undef, k, m)
@@ -24,6 +29,14 @@ function umatrix(weights::EsomWeights{Float64}, settings::Settings = defaultSett
     result
 end
 
+
+"""
+    pmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64}; radius = nothing)
+
+Generate a P-matrix for the given data and ESOM weights.
+
+If no pareto radius is given, a suitable one is estimated.
+"""
 function pmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                  settings::Settings = defaultSettings;
                  radius::Union{Real, Nothing} = nothing)
@@ -57,6 +70,12 @@ function pmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
     return result
 end
 
+
+"""
+    ustarmatrix(um::AbstractMatrix{Float64}, pm::AbstractMatrix{Int})
+
+Generate a U*-matrix from the given U- and P-matrices.
+"""
 function ustarmatrix(um::AbstractMatrix{Float64}, pm::AbstractMatrix{Int},
                      settings::Settings = defaultSettings)
     @assert size(um) == size(pm)
@@ -66,12 +85,19 @@ function ustarmatrix(um::AbstractMatrix{Float64}, pm::AbstractMatrix{Int},
     return um .* scaleFactor.(pm)
 end
 
+
+"""
+    ustarmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64})
+
+Generate a U*-matrix for the given data and ESOM weights.
+"""
 function ustarmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                      settings::Settings = defaultSettings)
     um = umatrix(weights, settings)
     pm = pmatrix(data, weights, settings)
     return ustarmatrix(um, pm, settings)
 end
+
 
 for f in (:pmatrix, :ustarmatrix)
     @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
