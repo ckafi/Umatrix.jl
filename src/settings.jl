@@ -30,6 +30,7 @@ end
 
 const defaultSettings = Settings()
 
+# macro to unpack a settings value into local scope
 macro unpack(exp)
     keys = isa(exp, Symbol) ? [exp] : exp.args
     assigments = [:( $key = getproperty(settings, $(Expr(:quote, key))) ) for key in keys]

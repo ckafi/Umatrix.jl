@@ -29,7 +29,7 @@ end
     initMethod(::Val{:uniform_mean_std})
 
 Returns an initializer function. The values are uniformly distributed between
-``[μ-2σ,μ+2σ]`` of the data column.
+``[μ-2σ, μ+2σ]`` of the data column.
 """
 function initMethod(::Val{:uniform_mean_std}, settings::Settings = defaultSettings)
     m = mean(col)
