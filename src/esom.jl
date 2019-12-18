@@ -29,12 +29,10 @@ function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Fl
     coolDownRadius = coolDown(s.radiusCooling, s.radius, s.epochs)
     coolDownLearningrate = coolDown(s.learningRateCooling, s.learningRate, s.epochs)
     for i in 1:s.epochs
-        println("Epoch $(i) started")
         radius = coolDownRadius(i)
         learningRate = coolDownLearningrate(i)
         esomTrainEpoch!(data, weights, radius, learningRate, settings)
     end
-    println("---- Esom Training Finished ----")
     if settings.shiftToHighestDensity
         weights = shiftToHighestDensity(data, weights)
     end
@@ -63,14 +61,10 @@ function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights
     @assert size(dataPoint, 1) == size(weights, 1)
     bestMatch_index = bestMatch(dataPoint, weights, settings)
     neighbours = neighbourhood(bestMatch_index, radius, settings)
-    kernel = neighbourhoodKernel(settings.neighbourhoodKernel)
-    dist(i) = latticeDistance(i, bestMatch_index, settings)
-    @inbounds Threads.@threads for i in 1:size(neighbours, 1)
-        index = neighbours[i]
-        distance = dist(neighbours[i])
-        weights[:,index] +=  learningRate * kernel(distance, radius) *
-                             (dataPoint - weights[:,index])
-    end
+    kernel = neighbourhoodKernel(settings.neighbourhoodKernel, radius)
+    distances = map(i -> latticeDistance(i, bestMatch_index, settings), neighbours)
+    weights[:,neighbours] += (learningRate .* kernel.(distances))' .*
+                             (dataPoint .- weights[:, neighbours])
     return weights
 end
 
@@ -93,14 +87,14 @@ function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Floa
     @assert size(dataPoint, 1) == size(weights, 1)
     dist = settings.distance
     slice = Slices(weights, 1)
-    index = _findmin(weight -> dist(weight, dataPoint), slice)[2]
-    return CartesianIndex(index)
+    index::CartesianIndex{2} = _findmin(weight -> dist(weight, dataPoint), slice)[2]
+    return index
 end
 
 function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
                       settings::Settings = defaultSettings)
-    # since plot show the matrix four time, the midpoint of the plot is equal to
-    # the latticeSize
+    # since the plot shos the matrix four times, the midpoint of the plot is
+    # equal to the latticeSize
     offset = CartesianIndex(settings.latticeSize...) - pos
     indices = CartesianIndices(Slices(weights, 1))
     new_indices = (indices .- offset)[:]
