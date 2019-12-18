@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+    plot_matrix(m; <keyword arguments>)
+
+Visualize the given U-, P- or U*-matrix.
+
+# Arguments
+- `projection`: A projection of data points to ESOM neuron to show on the map.
+- `classes`: The class of each data point. Used to color the dots for the projection.
+- `normalize`: Whether to normalize the given matrix. Default: `true`.
+- `colorStyle`: Either `:umatrix` or `:pmatrix`. Default: `:umatrix`.
+"""
 @userplot Plot_Matrix
 
 @recipe function f(p::Plot_Matrix;
@@ -77,6 +88,7 @@
 
 end
 
+
 colormap_umatrix = begin
     local c = ["#3C6DF0", "#3C6DF0", "#3C6DF0", "#006602", "#006A02", "#006D01",
                "#007101", "#007501", "#007901", "#007C00", "#008000", "#068103",
@@ -103,6 +115,7 @@ colormap_umatrix = begin
     local f(s) = parse(RGB, s)
     f.(c) |> ColorGradient
 end
+
 
 colormap_pmatrix = begin
     local c = ["#FFFFFF", "#FFFFF7", "#FFFFEF", "#FFFFE7", "#FFFFDF", "#FFFFD7",
