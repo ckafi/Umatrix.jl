@@ -25,6 +25,7 @@ function neighbourhood(index::CartesianIndex{2}, radius::Float64,
     return unique(correctCoords(neighbours, settings))
 end
 
+
 """
     neighbourhoodOffsets(radius::Float64)
 
@@ -38,6 +39,7 @@ function neighbourhoodOffsets(radius::Float64)
     return offsets
 end
 
+
 """
     directNeighbours(ind::CartesianIndex{2})
 
@@ -49,6 +51,7 @@ function directNeighbours(ind::CartesianIndex{2}, settings::Settings = defaultSe
     deleteat!(neighbours, 5)
     return correctCoords(neighbours, settings)
 end
+
 
 """
     correctCoords(coords::AbstractVector{CartesianIndex{2}})
@@ -65,6 +68,7 @@ function correctCoords(coords::AbstractVector{CartesianIndex{2}},
     end
 end
 
+
 """
     removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}})
 
@@ -74,6 +78,7 @@ function removeCoordsOutsideBounds(coords::AbstractVector{CartesianIndex{2}},
                                    settings::Settings = defaultSettings)
     filter(i -> all((1,1) .<= i.I .<= settings.latticeSize), coords)
 end
+
 
 """
     wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}},
@@ -86,6 +91,7 @@ function wrapCoordsOnToroid(coords::AbstractVector{CartesianIndex{2}},
     mod_replace_zero(x,y) = if (m = mod(x,y)) == 0 y else m end
     map(i -> CartesianIndex(mod_replace_zero.(i.I,settings.latticeSize)), coords)
 end
+
 
 """
     latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2},
@@ -101,6 +107,7 @@ function latticeDistance(a::CartesianIndex{2}, b::CartesianIndex{2},
     return sqrt(sum(diff))
 end
 
+
 @inline neighbourhoodKernel(kernel::Symbol, radius::Float64) =
     neighbourhoodKernel(Val(kernel), radius)
 
@@ -113,6 +120,7 @@ function neighbourhoodKernel(::Val{:cone}, radius::Float64)
     (dist::Float64) -> (radius - dist)/radius
 end
 
+
 """
     neighbourhoodKernel(::Val{:gauss}, radius::Float64)
 
@@ -121,6 +129,7 @@ Returns a gaussian neighbourhood decay function.
 function neighbourhoodKernel(::Val{:gauss}, radius::Float64)
     (dist::Float64) -> exp(-(dist/radius)^2/2)
 end
+
 
 """
     neighbourhoodKernel(::Val{:mexhat}, radius::Float64)

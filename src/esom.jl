@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 function esomTrain(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     return esomTrainOnline(data, settings)
 end
+
 
 function esomTrainOnline(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     weights = esomInit(data, settings)
     return esomTrainOnline!(data, weights, settings)
 end
+
 
 function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                          settings::Settings = defaultSettings)
@@ -39,11 +40,13 @@ function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Fl
     return weights
 end
 
+
 function esomInit(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     f = initMethod(settings)
     result::Matrix{Float64} = hcat(f.(Slices(data, 1))...)
     return reshape(permutedims(result), (size(data,2), settings.latticeSize...))
 end
+
 
 function esomTrainEpoch!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                          radius::Float64, learningRate::Float64,
@@ -54,6 +57,7 @@ function esomTrainEpoch!(data::AbstractMatrix{Float64}, weights::EsomWeights{Flo
     end
     return weights
 end
+
 
 function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
                         radius::Float64, learningRate::Float64,
@@ -68,6 +72,7 @@ function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights
     return weights
 end
 
+
 function projection(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                     settings::Settings = defaultSettings;
                     key::AbstractVector{Int} = 1:size(data,1))
@@ -78,9 +83,11 @@ function projection(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64}
     f.(key) |> Dict
 end
 
+
 function projection(data::LRNData, args...; kwargs...)
     projection(data.data, args...; key=data.key, kwargs...)
 end
+
 
 function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
                    settings::Settings = defaultSettings)
@@ -90,6 +97,7 @@ function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Floa
     index::CartesianIndex{2} = _findmin(weight -> dist(weight, dataPoint), slice)[2]
     return index
 end
+
 
 function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
                       settings::Settings = defaultSettings)
@@ -106,6 +114,7 @@ function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
     return result
 end
 
+
 function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                                settings = defaultSettings)
     if !settings.toroid return weights end
@@ -114,6 +123,7 @@ function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeigh
     pos = findfirst(isequal(maximum(p)), p)
     return shiftWeights(weights, pos, settings)
 end
+
 
 for f in (:esomTrain, :esomTrainOnline, :esomTrainOnline!, :esomInit,
           :shiftToHighestDensity)

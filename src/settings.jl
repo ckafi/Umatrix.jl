@@ -28,7 +28,9 @@ Base.@kwdef mutable struct Settings
     shiftToHighestDensity::Bool          = true
 end
 
+
 const defaultSettings = Settings()
+
 
 # macro to unpack a settings value into local scope
 macro unpack(exp)
@@ -37,7 +39,9 @@ macro unpack(exp)
     esc(Expr(:block, assigments...))
 end
 
+
 Base.copy(s::Settings) = deepcopy(s)
+
 
 function Base.show(io::IO, ::MIME"text/plain", settings::Settings)
     print(io, "Umatrix settings:")

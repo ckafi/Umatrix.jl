@@ -17,19 +17,23 @@
 """
     coolDown(::Val{:linear}, (start, stop), steps)
 
-Returns a linear cooldown function. The range `start - stop` is devided into
-equidistant `steps`.
+Return a linear cooldown function.
+
+The range `start - stop` is devided into equidistant `steps`.
 """
 function coolDown(::Val{:linear}, (start, stop), steps)
     return step -> start - ((start - stop) / steps) * (step - 1)
 end
+
+
 """
     coolDown(::Val{:leadInOut}, (start, stop), steps; leadIn = 0.1, leadOut = 0.95)
 
-Returns a linear cooldown function with lead-in and lead-out. The range `start -
-stop` is devided into equidistant `steps`. If the given `step` is below the
-`leadIn` quantile, `start` is returned; if it's above the `leadOut` quantile,
-`stop` is returned.
+Return a linear cooldown function with lead-in and lead-out.
+
+The range `start - stop` is devided into equidistant `steps`. If the given
+`step` is below the `leadIn` quantile, `start` is returned; if it's above the
+`leadOut` quantile, `stop` is returned.
 """
 function coolDown(::Val{:leadInOut}, (start, stop), steps; leadIn = 0.1, leadOut = 0.95)
     @assert leadIn < leadOut
