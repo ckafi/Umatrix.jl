@@ -25,6 +25,7 @@ Base.@kwdef mutable struct Settings
     initMethod::Symbol                   = :uniform_min_max
     neighbourhoodKernel::Symbol          = :gauss
     distance::PreMetric                  = Euclidean()
+    shiftToHighestDensity::Bool          = true
 end
 
 const defaultSettings = Settings()

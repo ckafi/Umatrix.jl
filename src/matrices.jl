@@ -73,30 +73,6 @@ function ustarmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64
     return ustarmatrix(um, pm, settings)
 end
 
-function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
-                      settings::Settings = defaultSettings)
-    # since plot show the matrix four time, the midpoint of the plot is equal to
-    # the latticeSize
-    offset = CartesianIndex(settings.latticeSize...) - pos
-    indices = CartesianIndices(Slices(weights, 1))
-    new_indices = (indices .- offset)[:]
-    new_indices = wrapCoordsOnToroid(new_indices)
-    result = similar(weights)
-    for (old, new) in zip(indices, new_indices)
-        result[:,new] = weights[:,old]
-    end
-    return result
-end
-
-function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
-                               settings = defaultSettings)
-    if !settings.toroid return weights end
-    radius = filter(!iszero, pairwise(Euclidean(), data, dims=1)) |> mean
-    p = pmatrix(data, weights, settings, radius = radius)
-    pos = findfirst(isequal(maximum(p)), p)
-    return shiftWeights(weights, pos, settings)
-end
-
-for f in (:pmatrix, :ustarmatrix, :shiftToHighestDensity)
+for f in (:pmatrix, :ustarmatrix)
     @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
 end

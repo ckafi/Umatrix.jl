@@ -35,6 +35,9 @@ function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Fl
         esomTrainEpoch!(data, weights, radius, learningRate, settings)
     end
     println("---- Esom Training Finished ----")
+    if settings.shiftToHighestDensity
+        weights = shiftToHighestDensity(data, weights)
+    end
     return weights
 end
 
@@ -62,7 +65,7 @@ function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights
     neighbours = neighbourhood(bestMatch_index, radius, settings)
     kernel = neighbourhoodKernel(settings.neighbourhoodKernel)
     dist(i) = latticeDistance(i, bestMatch_index, settings)
-    for i in 1:size(neighbours, 1)
+    @inbounds Threads.@threads for i in 1:size(neighbours, 1)
         index = neighbours[i]
         distance = dist(neighbours[i])
         weights[:,index] +=  learningRate * kernel(distance, radius) *
@@ -94,6 +97,31 @@ function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Floa
     return CartesianIndex(index)
 end
 
-for f in (:esomTrain, :esomTrainOnline, :esomTrainOnline!, :esomInit)
+function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
+                      settings::Settings = defaultSettings)
+    # since plot show the matrix four time, the midpoint of the plot is equal to
+    # the latticeSize
+    offset = CartesianIndex(settings.latticeSize...) - pos
+    indices = CartesianIndices(Slices(weights, 1))
+    new_indices = (indices .- offset)[:]
+    new_indices = wrapCoordsOnToroid(new_indices)
+    result = similar(weights)
+    for (old, new) in zip(indices, new_indices)
+        result[:,new] = weights[:,old]
+    end
+    return result
+end
+
+function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
+                               settings = defaultSettings)
+    if !settings.toroid return weights end
+    radius = filter(!iszero, pairwise(Euclidean(), data, dims=1)) |> mean
+    p = pmatrix(data, weights, settings, radius = radius)
+    pos = findfirst(isequal(maximum(p)), p)
+    return shiftWeights(weights, pos, settings)
+end
+
+for f in (:esomTrain, :esomTrainOnline, :esomTrainOnline!, :esomInit,
+          :shiftToHighestDensity)
     @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
 end
