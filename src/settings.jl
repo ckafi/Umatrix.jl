@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
+@doc """
     mutable struct Settings
 
 A struct that encapsulates commonly used settings for Umatrix.
@@ -20,7 +20,7 @@ A struct that encapsulates commonly used settings for Umatrix.
 If no explicit settings are given, most functions implicitly use
 `Umatrix.defaultSettings`. There are a couple of ways to change settings:
 
-```
+```julia
 # change default settings for all function calls
 Umatrix.defaultSettings.some_setting = 20
 # create new settings with the kw constructor
@@ -33,7 +33,7 @@ some_function(..., settings = s2)
 ```
 
 # Fields and defaults
-```
+```julia
 latticeSize           :: Tuple{Int64,Int64}     = (50, 80)
 toroid                :: Bool                   = true
 epochs                :: Int64                  = 24
@@ -46,7 +46,7 @@ neighbourhoodKernel   :: Symbol                 = :gauss
 distance              :: Distances.PreMetric    = Distances.Euclidean()
 shiftToHighestDensity :: Bool                   = true
 ```
-"""
+""" Settings
 Base.@kwdef mutable struct Settings
     latticeSize::Tuple{Int, Int}         = (50,80)
     toroid::Bool                         = true
