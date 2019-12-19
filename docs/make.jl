@@ -7,7 +7,15 @@ makedocs(
     sitename = "Umatrix.jl",
     authors = "Tobias Frilling",
     format = Documenter.HTML(),
-    modules = [Umatrix]
+    modules = [Umatrix],
+    pages = [
+             "Home" => "index.md",
+             "ESOM Training" => "esom.md",
+             "Matrices" => "matrices.md",
+             "Plotting" => "plotting.md",
+             "Settings" => "settings.md",
+             "API" => "api.md"
+            ]
 )
 
 deploydocs(

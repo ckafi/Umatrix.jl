@@ -1,0 +1,3 @@
+```@docs
+Umatrix.Settings
+```
