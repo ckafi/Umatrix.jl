@@ -20,8 +20,7 @@ Return every (unique) `CartesianIndex{2}` in a `radius`-sized circle around `ind
 function neighbourhood(index::CartesianIndex{2}, radius::Float64,
                        settings::Settings = defaultSettings)
     offsets = neighbourhoodOffsets(radius)
-    f(i) = i + index
-    neighbours = f.(offsets)
+    neighbours = (i -> i + index).(offsets)
     return unique(correctCoords(neighbours, settings))
 end
 

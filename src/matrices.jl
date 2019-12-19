@@ -99,6 +99,7 @@ function ustarmatrix(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64
 end
 
 
+# compatability with DataIO.LRNData
 for f in (:pmatrix, :ustarmatrix)
     @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
 end

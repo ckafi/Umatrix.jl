@@ -112,8 +112,7 @@ colormap_umatrix = begin
                "#FDFDFD", "#FDFDFD", "#FDFDFD", "#FCFCFC", "#FCFCFC", "#FCFCFC",
                "#FBFBFB", "#FBFBFB", "#FBFBFB", "#FAFAFA", "#FAFAFA", "#FAFAFA",
                "#F9F9F9", "#F9F9F9", "#FFFFFF", "#FFFFFF"]
-    local f(s) = parse(RGB, s)
-    f.(c) |> ColorGradient
+    (s -> parse(RGB, s)).(c) |> ColorGradient
 end
 
 
@@ -140,7 +139,5 @@ colormap_pmatrix = begin
                "#4A0000", "#450000", "#400000", "#3A0000", "#350000", "#300000",
                "#2B0000", "#250000", "#200000", "#1B0000", "#150000", "#100000",
                "#0B0000", "#050000"]
-    local f(s) = parse(RGB, s)
-    f.(c) |> ColorGradient
+    (s -> parse(RGB, s)).(c) |> ColorGradient
 end
-
