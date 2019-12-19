@@ -12,10 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+    mutable struct Settings
+
+A struct that encapsulates commonly used settings for Umatrix.
+
+If no explicit settings are given, most functions implicitly use
+`Umatrix.defaultSettings`. There are a couple of ways to change settings:
+
+```
+# change default settings for all function calls
+Umatrix.defaultSettings.some_setting = 20
+# create new settings with the kw constructor
+s1 = Umatrix.Settings(setting1 = 23, setting2 = 42)
+some_function(..., settings = s1)
+# copy existing settings and change it
+s2 = copy(s1)
+s2.setting3 = 99
+some_function(..., settings = s2)
+```
+
+# Fields and defaults
+```
+latticeSize           :: Tuple{Int64,Int64}     = (50, 80)
+toroid                :: Bool                   = true
+epochs                :: Int64                  = 24
+learningRate          :: Tuple{Float64,Float64} = (0.5, 0.1)
+learningRateCooling   :: Symbol                 = :linear
+radius                :: Tuple{Int64,Int64}     = (24, 1)
+radiusCooling         :: Symbol                 = :linear
+initMethod            :: Symbol                 = :uniform_min_max
+neighbourhoodKernel   :: Symbol                 = :gauss
+distance              :: Distances.PreMetric    = Distances.Euclidean()
+shiftToHighestDensity :: Bool                   = true
+```
+"""
 Base.@kwdef mutable struct Settings
     latticeSize::Tuple{Int, Int}         = (50,80)
-    rows::Int                            = 50
-    columns::Int                         = 80
     toroid::Bool                         = true
     epochs::Int                          = 24
     learningRate::Tuple{Float64,Float64} = (0.5,0.1)
