@@ -12,17 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+    esomTrain(data::AbstractMatrix{Float64})
+
+Train an ESOM for the given data set.
+
+Uses on-line learning per default. (Batch is not yet implemented)
+"""
 function esomTrain(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     return esomTrainOnline(data, settings)
 end
 
 
+"""
+    esomTrainOnline(data::AbstractMatrix{Float64})
+
+Train an ESOM on-line for the given data set.
+"""
 function esomTrainOnline(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     weights = esomInit(data, settings)
     return esomTrainOnline!(data, weights, settings)
 end
 
 
+"""
+    esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64})
+
+Train the ESOM weights on-line for the given data set.
+
+This function mutates `weights`
+"""
 function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                          settings::Settings = defaultSettings)
     @assert size(data, 2) == size(weights, 1)
@@ -34,13 +53,18 @@ function esomTrainOnline!(data::AbstractMatrix{Float64}, weights::EsomWeights{Fl
         learningRate = coolDownLearningrate(i)
         esomTrainEpoch!(data, weights, radius, learningRate, settings)
     end
-    if settings.shiftToHighestDensity
+    if settings.shiftToHighestDensity && settings.toroid
         weights = shiftToHighestDensity(data, weights)
     end
     return weights
 end
 
 
+"""
+    esomInit(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
+
+Initilize an ESOM with values based on `settings.initMethod`.
+"""
 function esomInit(data::AbstractMatrix{Float64}, settings::Settings = defaultSettings)
     f = initMethod(settings)
     result::Matrix{Float64} = hcat(f.(Slices(data, 1))...)
@@ -48,6 +72,13 @@ function esomInit(data::AbstractMatrix{Float64}, settings::Settings = defaultSet
 end
 
 
+"""
+    esomTrainEpoch!(data, weights, radius, learningRate)
+
+Train the ESOM for a single epoch.
+
+This function mutates `weights`
+"""
 function esomTrainEpoch!(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                          radius::Float64, learningRate::Float64,
                          settings::Settings = defaultSettings)
@@ -59,6 +90,13 @@ function esomTrainEpoch!(data::AbstractMatrix{Float64}, weights::EsomWeights{Flo
 end
 
 
+"""
+    esomTrainStep!(dataPoint, weights, radius, learningRate)
+
+Train the ESOM with a single data point.
+
+This function mutates `weights`
+"""
 function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
                         radius::Float64, learningRate::Float64,
                         settings::Settings = defaultSettings)
@@ -73,22 +111,32 @@ function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights
 end
 
 
+"""
+    projection(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64})
+
+Generate a projection from each data point to the best matching ESOM neuron.
+"""
 function projection(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                     settings::Settings = defaultSettings;
                     key::AbstractVector{Int} = 1:size(data,1))
     @assert length(key) == size(data, 1)
     @assert allunique(key)
     @assert all(i -> 1 <= i <= size(data, 1), key)
-    f(i) = i => bestMatch(data[i,:], weights)
-    f.(key) |> Dict
+    return (i -> i => bestMatch(data[i,:], weights)).(key) |> Dict
 end
 
 
+# compatability with DataIO.LRNData
 function projection(data::LRNData, args...; kwargs...)
     projection(data.data, args...; key=data.key, kwargs...)
 end
 
 
+"""
+    bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64})
+
+Search for the best matching ESOM neuron for the given data point.
+"""
 function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Float64},
                    settings::Settings = defaultSettings)
     @assert size(dataPoint, 1) == size(weights, 1)
@@ -99,6 +147,13 @@ function bestMatch(dataPoint::AbstractVector{Float64}, weights::EsomWeights{Floa
 end
 
 
+"""
+    shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2})
+
+Shift the ESOM so the given `pos` is in the middle.
+
+This makes only sense for a toroidal map.
+"""
 function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
                       settings::Settings = defaultSettings)
     # since the plot shos the matrix four times, the midpoint of the plot is
@@ -115,6 +170,11 @@ function shiftWeights(weights::EsomWeights{Float64}, pos::CartesianIndex{2},
 end
 
 
+"""
+    shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64})
+
+Shift the ESOM so the point of highest density is centered.
+"""
 function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeights{Float64},
                                settings = defaultSettings)
     if !settings.toroid return weights end
@@ -125,6 +185,7 @@ function shiftToHighestDensity(data::AbstractMatrix{Float64}, weights::EsomWeigh
 end
 
 
+# compatability with DataIO.LRNData
 for f in (:esomTrain, :esomTrainOnline, :esomTrainOnline!, :esomInit,
           :shiftToHighestDensity)
     @eval @inline ($f)(data::LRNData, args...; kwargs...) = ($f)(data.data, args...; kwargs...)
