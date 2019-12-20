@@ -105,8 +105,8 @@ function esomTrainStep!(dataPoint::AbstractVector{Float64}, weights::EsomWeights
     neighbours = neighbourhood(bestMatch_index, radius, settings)
     kernel = neighbourhoodKernel(settings.neighbourhoodKernel, radius)
     distances = map(i -> latticeDistance(i, bestMatch_index, settings), neighbours)
-    weights[:,neighbours] += (learningRate .* kernel.(distances))' .*
-                             (dataPoint .- weights[:, neighbours])
+    @. weights[:,neighbours] += (learningRate * kernel(distances))' *
+                             (dataPoint - weights[:, neighbours])
     return weights
 end
 
